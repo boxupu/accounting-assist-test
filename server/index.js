@@ -2,6 +2,7 @@ var http = require('http');
 
 const list = require("./list");
 const getQueryString = require('./get-query-string')
+const detail = require('./detail')
 // readData().then((data)=>{
 //   console.log(data)
 // })
@@ -27,7 +28,10 @@ http.createServer(function(request, response) {
           response.write(JSON.stringify(res))
         }
       }else if(pathName[1] === 'detail'){
-        response.write(jsonData[1])
+        var sum = getQueryString(pathParam, 'sum')
+        var res = detail(sum)
+        console.log(res)
+        response.write(JSON.stringify(res))
       }
     }
     response.end();

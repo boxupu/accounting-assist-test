@@ -1,7 +1,11 @@
 import React, { Component } from 'react'
-import { List, Button, Typography } from 'antd'
-import axios from 'axios'
+import { List, Modal, Button, Upload, Icon} from 'antd'
+import { getListData,getDetailData } from '../api/api'
 
+
+
+import ModalView from './modal'
+console.log(getListData)
 class TableList extends Component {
   constructor(props){
     super(props);
@@ -9,26 +13,52 @@ class TableList extends Component {
       list:[],
       offset: 0,
       limit: 20,
-      type: 0,
-      isLoaded:false
+      type: 1,
+      isLoaded:false,
+      showLoadMore: false,
+
+      modalContentStart: 0,
+      modalContentEnd: 0,
+      modalContentComb: [],
+      modalShow: false
     }
   }
 
-  getData(){
-    let _this = this
+  getData(type, offset){
+    let _type = type || this.state.type
+    let _offset = offset * this.state.limit
+    let _limit = this.state.limit + 1
     this.setState({
       isLoaded: true
     })
-    axios.get('http://127.0.0.1:8888/list?type=0&offset=' + this.state.offset * this.state.limit + '&limit=' +  this.state.limit)
-    .then(function (response) {
-      _this.setState({
-        list:_this.state.list.concat(response.data),
+
+    getListData(_type, _offset, _limit)
+    .then((res) => {
+      if(res.data.length <= this.state.limit) {
+        this.setState({
+          showLoadMore:false,
+        })
+      }else{
+        this.setState({
+          showLoadMore:true,
+        })
+      }
+      let newData = res.data.slice(0,20)
+      let newList = []
+      if(type !== undefined && this.state.type !== type){
+         newList = newData
+      }else{
+         newList = this.state.list.concat(newData)
+      }
+      this.setState({
+        type: _type,
+        offset: offset,
+        list:newList,
         isLoaded:false
       });
     })
-    .catch(function (error) {
-      console.log(error);
-      _this.setState({
+    .catch( (error) => {
+      this.setState({
         isLoaded:false,
         error:error
       })
@@ -36,33 +66,67 @@ class TableList extends Component {
   }
 
   onLoadMore () {
-    console.log(this)
     var offset = this.state.offset + 1
+    this.getData(this.state.type, offset)
+  }
+
+  onModalToggle(item){
+    if(this.state.type === 1) return
     this.setState({
-      offset: offset
+      modalShow: !this.state.modalShow,
+      modalSum: item
     })
-    this.getData()
+    if(item > 0){
+      getDetailData(item)
+      .then((res)=>{
+        this.setState({
+          modalContentStart: res.data.startTime,
+          modalContentEnd: res.data.endTime,
+          modalContentComb: res.data.comb
+        })
+      })
+    }else if(this.state.modalShow){
+      this.setState({
+        modalContentStart: 0,
+        modalContentEnd: 0,
+        modalContentComb: []
+      })
+    }
   }
 
   componentDidMount(){
-    this.getData()
+    this.getData(this.state.type, this.state.offset)
   }
 
 
   render() {
-    console.log(this.props, 'props');
     return (
       <div>
-        <h3 style={{ marginBottom: 16 }}>Default Size</h3>
+        <div className="tab-title">
+          <Button onClick={this.getData.bind(this,1, 0)} type={this.state.type === 1 ? 'primary':''}>Due Payments</Button>
+          <Button onClick={this.getData.bind(this,2, 0)} type={this.state.type === 2 ? 'primary':''}>Bank Transfer</Button>
+          <Upload>
+            <Button>
+              <Icon type="upload" /> Click to Upload
+            </Button>
+          </Upload>
+        </div>
         <List
           size="large"
-          header={<div>Header</div>}
-          footer={<div>Footer</div>}
           bordered
           dataSource={this.state.list}
-          renderItem={item => (<List.Item>{item}</List.Item>)}
+          renderItem={item => (<List.Item onClick={this.onModalToggle.bind(this,item)}>{item}</List.Item>)}
         />
-        <Button onClick={this.onLoadMore.bind(this)}>loading more</Button>
+        {this.state.showLoadMore && <Button className="load-more" onClick={this.onLoadMore.bind(this)}>loading more</Button>}
+
+        <ModalView
+          modalContentStart={this.state.modalContentStart}
+          modalContentEnd={this.state.modalContentEnd}
+          modalContentComb={this.state.modalContentComb}
+          modalShow={this.state.modalShow}
+          onModalToggle={this.onModalToggle.bind(this)}
+        >
+        </ModalView>
       </div>
     )
   }

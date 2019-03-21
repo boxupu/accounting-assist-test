@@ -9,7 +9,7 @@ function ConvertToTable(data) {
       if(itemArr[0]) dataArr[0].push(itemArr[0])
       if(itemArr[1]) dataArr[1].push(itemArr[1])
     }
-    return dataArr
+    return dataArr.slice(0,100)
 }
 
 
